@@ -272,5 +272,7 @@ class sfcalc {
 		console.log(generated.sfRound()==a,generated.equivalent(a));
 	}
 }
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
+export default sfcalc;
 
 
