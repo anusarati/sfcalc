@@ -122,6 +122,13 @@ class sfcalc {
 		if (s.includes('-')) f--;
 		return s.padEnd(s.length+this.sf-f,'0');
 	}
+	withoutED(s){ // remove digits past most significant figure
+		let f=this.sf;
+		if (s.includes('.')) f++;
+		if (s.includes('-')) f++;
+		return s.substring(0,f);
+	}
+	// thanks to my CS teacher Shankar Kumar
 	toString(pute=true)
 	{
 		let n=this.sfRound(), s=new String(n);
@@ -132,7 +139,7 @@ class sfcalc {
 				let oom=this.orderOfMagnitude;
 				n/=Math.pow(10,oom);
 				s=new String(n);
-				s=this.padSZNE(s)+'e';
+				s=this.padSZNE(this.withoutED(s))+'e';
 				if (oom>=0) s+='+'; // mimic C++ and JS
 				s+=oom;
 			}
@@ -142,7 +149,7 @@ class sfcalc {
 				let frac=this.data%1;
 				// if there isn't a fractional part and the most significant digit is 0, add a dot to make it clear they're all significant
 				if (this.sf==s.length && !frac) s+='.';
-				else s=this.padSZNE(s);
+				else s=this.padSZNE(this.withoutED(s));
 			}
 		}
 		return s;
