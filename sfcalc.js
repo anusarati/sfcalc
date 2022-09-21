@@ -269,7 +269,7 @@ class sfcalc {
 		console.log(name+" test");
 		console.log("Expected "+right);
 		console.log("Got "+generated.toString());
-		console.log(generated.sfRound()==a,generated.equivalent(a));
+		console.log(generated.sfRound()==right,generated.equivalent(right));
 	}
 }
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
