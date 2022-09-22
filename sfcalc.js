@@ -134,22 +134,26 @@ class sfcalc {
 		let n=this.sfRound(), s=new String(n);
 		if (!s.includes('e')) // it keeps the e if it's already there even if pute=false
 		{
+			let oom;
 			if (pute)
 			{
-				let oom=this.orderOfMagnitude;
+				oom=this.orderOfMagnitude;
 				n/=Math.pow(10,oom);
 				s=new String(n);
-				s=this.padSZNE(this.withoutED(s))+'e';
-				if (oom>=0) s+='+'; // mimic C++ and JS
-				s+=oom;
 			}
 			else
 			{
 				s=this.sfRound().toString();
-				let frac=this.data%1;
-				// if there isn't a fractional part and the most significant digit is 0, add a dot to make it clear they're all significant
-				if (this.sf==s.length && !frac) s+='.';
-				else s=this.padSZNE(this.withoutED(s));
+			}
+			let frac=this.data%1;
+			// if there isn't a fractional part and the most significant digit is 0, add a dot to make it clear they're all significant
+			if (this.sf>=s.length && !frac) s+='.';
+			s=this.padSZNE(this.withoutED(s));
+			if (pute)
+			{
+				s+='e';
+				if (oom>=0) s+='+'; // mimic C++ and JS
+				s+=oom;
 			}
 		}
 		return s;
@@ -280,6 +284,9 @@ class sfcalc {
 	}
 }
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
-export default sfcalc;
+// web
+//export default sfcalc;
+// Node.js
+if (module && module.exports) module.exports=sfcalc;
 
 
