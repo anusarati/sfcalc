@@ -221,7 +221,12 @@ class sfcalc {
 					case '*': case '/': this.op=oper; break;
 					default:
 						if (oper!='antilog10' && oper!='log10') this.op=oper; // if oper is a 2 argument operation
-						else descend();
+						else
+						{
+							if (!this.op) this.op='('; // interpret xlog10 y as x*log10 y
+							descend();
+							node.op=oper;
+						}
 						break;
 				}
 			}
@@ -232,6 +237,8 @@ class sfcalc {
 		let m=nregex.exec(s), mantil=antilogreg.exec(s), mlog=logreg.exec(s);
 		for (let i=0;i<s.length;i++)
 		{
+			console.log(s[i]);
+			console.log(nodes);
 			if (m && i==m.index)
 			{
 				let n=new sfcalc(m[0]);
@@ -256,8 +263,7 @@ class sfcalc {
 					case 'a':
 						if (mantil && i==mantil.index)
 						{
-							if (node.op) descend();
-							node.op="antilog10";
+							node.pass("antilog10");
 							mantil=antilogreg.exec(s);
 							i+=8;
 						}
@@ -265,8 +271,7 @@ class sfcalc {
 					case 'l':
 						if (mlog && i==mlog.index)
 						{
-							if (node.op) descend();
-							node.op="log10";
+							node.pass("log10");
 							mlog=logreg.exec(s);
 							i+=4;
 						}
@@ -276,8 +281,10 @@ class sfcalc {
 						break;
 				}
 			}
+			console.log(nodes);
 		}
 		while (nodes.length>1) ascend();
+			console.log(nodes);
 		return node.arg;
 	}
 	log10()
