@@ -163,11 +163,14 @@ class sfcalc {
 	// thanks to Python documentation
 	static interpret(s)
 	{
+		let node,nodes;
+		function descend() { node=new SyntaxNode; nodes.push(node); }
+		function ascend() { node=nodes[nodes.length-2].evaluate(nodes.pop().arg); }
 		//https://en.wikipedia.org/wiki/Parsing#Parser
 		class SyntaxNode
 		{
 			op; arg;
-			evaluate(n,paren)
+			evaluate(n)
 			{
 				//console.log('evaluate ','n ',n,' paren ',paren,' op ',this.op,' arg ',this.arg);
 				switch (this.op)
@@ -197,19 +200,43 @@ class sfcalc {
 				this.op=undefined;
 				return this;
 			}
+			pass(oper)
+			{
+				switch(this.op)
+				{
+					case '+': case '-':
+						switch (oper)
+						{
+							case '+': case '-':
+								if (nodes.length>1)
+								{	
+									ascend();
+									if (this.op!=oper) node.pass('-'); // +- or -+
+									else node.pass('+'); // ++ or --
+								} else this.op=oper;
+								break;
+							default: descend(); node.op=oper; break;
+						}
+						break;
+					case '*': case '/': this.op=oper; break;
+					default:
+						if (oper!='antilog10' && oper!='log10') this.op=oper; // if oper is a 2 argument operation
+						else descend();
+						break;
+				}
+			}
 		}
 		// https://regex101.com/
 		let nregex=/(?<!log\d*)-?(\d+\.?\d*|\.\d+)(([eE])-?\d+)?/g, antilogreg=/antilog10/g, logreg=/log10/g;
-		// it's actually more like a linked list (degenerate tree)
-		// https://en.wikipedia.org/wiki/Binary_tree#Types_of_binary_trees
-		let node=new SyntaxNode,nodes=[node];
+		node=new SyntaxNode; nodes=[node];
 		let m=nregex.exec(s), mantil=antilogreg.exec(s), mlog=logreg.exec(s);
 		for (let i=0;i<s.length;i++)
 		{
 			if (m && i==m.index)
 			{
 				let n=new sfcalc(m[0]);
-				node.evaluate(n);
+				if (node.op!='+' && node.op!='-') node.evaluate(n);
+				else { descend(); node.arg=n; } 
 				i+=m[0].length-1;
 				m=nregex.exec(s);
 			}
@@ -221,14 +248,15 @@ class sfcalc {
 					// thanks to Aaron R. Matthis for reminding me about parentheses nesting
 					case '(':
 						if (!node.op) node.op='(';
-						node=new SyntaxNode; nodes.push(node);
+						descend();
 						break;
 					case ')':
-						node=nodes[nodes.length-2].evaluate(nodes.pop().arg);
+						ascend();
 						break;
 					case 'a':
 						if (mantil && i==mantil.index)
 						{
+							if (node.op) descend();
 							node.op="antilog10";
 							mantil=antilogreg.exec(s);
 							i+=8;
@@ -237,20 +265,19 @@ class sfcalc {
 					case 'l':
 						if (mlog && i==mlog.index)
 						{
+							if (node.op) descend();
 							node.op="log10";
 							mlog=logreg.exec(s);
 							i+=4;
 						}
 						break;
 					default:
-					 	if ("+-/*".includes(c))
-						{
-							node.op=c;
-						}
+					 	if ("+-/*".includes(c)) node.pass(c);
 						break;
 				}
 			}
 		}
+		while (nodes.length>1) ascend();
 		return node.arg;
 	}
 	log10()
