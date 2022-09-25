@@ -1,5 +1,5 @@
 // this work is dedicated to the public domain and may be used under the 0 BSD license
-// thanks to developer.mozilla.org and FOSS community and Humans Of Julia
+// thanks to developer.mozilla.org and FOSS community and Humans Of Julia and Julia lang docs
 // this doesn't work for precision of more than 16 decimal digits because of the limited precision of Number
 // significant figures lose precision with many sequential calculations anyways
 // e.g. add numbers with 1 significant figure between 1 and 9 a billion times, it could be anywhere from 1 billion to 9 billion, but all the digits would be significant with the conventional rules
@@ -7,6 +7,33 @@
 // https://en.wikipedia.org/wiki/Propagation_of_uncertainty
 // but significant figure rules are convention and are good enough for a few calculations, and error propagation is harder to do manually
 class sfcalc {
+	// returns index of first significant figure in string
+	static firstSigIndex(s)
+	{
+		let fsi=s.search(/[^0.]/);
+		if (fsi==-1) return s.length-1;
+		return fsi;
+	}
+	// count number of sigfigs in string
+	static nsigfig(s,fsi=sfcalc.firstSigIndex(s))
+	{
+		s=s.substring(fsi);
+		//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#advanced_searching_with_flags
+		let ei=s.search(/e/i);
+		if (ei!=-1) s=s.substring(0,ei); // remove scientific notation
+		// assuming 0 and 0. and 0.00000000 have 1 significant figure
+		let f=s.length;
+		if (s.includes('.')) f--;// subtract 1 because one character is a dot
+		else
+		{
+			let m=s.match(/0+$/);
+			if (m) f-=m[0].length; // exclude insignificant trailing zeros
+		}
+		if (s.includes('-')) f--; // minus sign does not count as a significant figure
+		// thanks to Geoffrey Hinton and Flux.jl and machine learning community
+		return Math.max(1,f); // at least 1 significant figure
+
+	}
 	constructor(data,sf)
 	{
 		// https://stackoverflow.com/q/30689817 reminded me I could check the type dynamically
@@ -16,23 +43,7 @@ class sfcalc {
 			// s should be convertible to a number via Number(s)
 			let s=data;
 			this.data=Number(s);
-			// index of first significant digit
-			let fsi=s.search(/[^0.]/);
-			s=s.substring(fsi);
-			//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#advanced_searching_with_flags
-			let ei=s.search(/e/i);
-			if (ei!=-1) s=s.substring(0,ei); // remove scientific notation
-			// assuming 0 and 0. and 0.00000000 have 1 significant figure
-			let f=s.length;
-			if (s.includes('.')) f--;// subtract 1 because one character is a dot
-			else
-			{
-				let m=s.match(/0+$/);
-				if (m) f-=m[0].length; // exclude insignificant trailing zeros
-			}
-			if (s.includes('-')) f--; // minus sign does not count as a significant figure
-			// thanks to Geoffrey Hinton and Flux.jl and machine learning community
-			this.sf=Math.max(1,f); // at least 1 significant figure
+			this.sf=sfcalc.nsigfig(s);
 		}
 		else
 		{
@@ -115,18 +126,20 @@ class sfcalc {
 		if (digitAfterMostSignificantDigit>5 || (digitAfterMostSignificantDigit==5 && mostSignificant%2)) n++;
 		return n/power;
 	}
-	// add 0s to have the same number of significant figures read, assuming s doesn't have e notation
-	padSZNE(s){
-		let f=s.length;
-		if (s.includes('.')) f--;
-		if (s.includes('-')) f--;
-		return s.padEnd(s.length+this.sf-f,'0');
-	}
-	withoutED(s){ // remove digits past most significant figure
-		let f=this.sf;
-		if (s.includes('.')) f++;
-		if (s.includes('-')) f++;
-		return s.substring(0,f);
+	// makes s have the same number of sf when read, assuming it doesn't have e notation
+	fix(s){
+		;
+		// remove leading zeros before one before dot 
+		s=s.substring(s.search(/[^0]|0?\./));
+		// remove digits past most significant figure
+		let fsi=sfcalc.firstSigIndex(s);
+		if (fsi!=-1) s=s.substring(0,fsi+this.sf);
+		let f=sfcalc.nsigfig(s,fsi);
+		let frac=this.data%1;
+		// add dot if needed
+		if (this.sf>=f && !frac) s+='.'; // assuming that if frac the string would already have a dot
+		// add significant zeros
+		return s.padEnd(s.length+this.sf-sfcalc.nsigfig(s,fsi),'0');
 	}
 	// thanks to my CS teacher Shankar Kumar
 	toString(pute=true)
@@ -134,23 +147,14 @@ class sfcalc {
 		let n=this.sfRound(), s=new String(n);
 		if (!s.includes('e')) // it keeps the e if it's already there even if pute=false
 		{
-			let oom;
+			s=this.sfRound().toString();
+			s=this.fix(s);
 			if (pute)
 			{
-				oom=this.orderOfMagnitude;
-				n/=Math.pow(10,oom);
-				s=new String(n);
-			}
-			else
-			{
-				s=this.sfRound().toString();
-			}
-			let frac=this.data%1;
-			// if there isn't a fractional part and the most significant digit is 0, add a dot to make it clear they're all significant
-			if (this.sf>=s.length && !frac) s+='.';
-			s=this.padSZNE(this.withoutED(s));
-			if (pute)
-			{
+				// thanks to regex101.com and MDN and regexone and whoever helped me learn regex and Hector Albizo
+				s=s.substring(sfcalc.firstSigIndex(s)).replace(/([1-9])/,"$1."); // start from the first significant figure and add a dot if it's not just 0
+
+				let oom=this.orderOfMagnitude;
 				s+='e';
 				if (oom>=0) s+='+'; // mimic C++ and JS
 				s+=oom;
@@ -237,8 +241,8 @@ class sfcalc {
 		let m=nregex.exec(s), mantil=antilogreg.exec(s), mlog=logreg.exec(s);
 		for (let i=0;i<s.length;i++)
 		{
-			console.log(s[i]);
-			console.log(nodes);
+			//console.log(s[i]);
+			//console.log(nodes);
 			if (m && i==m.index)
 			{
 				let n=new sfcalc(m[0]);
@@ -281,24 +285,32 @@ class sfcalc {
 						break;
 				}
 			}
-			console.log(nodes);
+			//console.log(nodes);
 		}
 		while (nodes.length>1) ascend();
-			console.log(nodes);
+			//console.log(nodes);
 		return node.arg;
 	}
 	log10()
 	{
-		let n=this.copy();
-		n.data=Math.log10(n.data);
-		if (Math.trunc(n.data)) n.sf++;
+		let n=new sfcalc;
+		n.data=Math.log10(this.data);
+		n.sf=this.sf;
+		if (Math.trunc(this.data)) n.sf++;
 		return n;
 	}
 	antilog10()
 	{
-		let n=this.copy();
-		if (Math.trunc(n.data)) n.sf--;
-		n.data=Math.pow(10,n.data);
+		let n=new sfcalc;
+		n.sf=this.sf;
+		if (Math.trunc(this.data)) n.sf--;
+		n.data=Math.pow(10,this.data);
+		return n;
+	}
+	sqrt()
+	{
+		let n=new sfcalc;
+		n.sf=this.sf; n.data=Math.sqrt(this.data);
 		return n;
 	}
 	// same with sfRound
@@ -309,12 +321,13 @@ class sfcalc {
 		else if (/^[sS]tring$/.test(typeof(x))) return this.equivalent(new sfcalc(x)); // if x is a string
 		else return this.equivalent(new sfcalc(String(x)));
 	}
+	// logs whether generated calculation is equivalent to right hand side
 	static unitTest(name,generated,right)
 	{
 		console.log(name+" test");
 		console.log("Expected "+right);
 		console.log("Got "+generated.toString());
-		console.log(generated.sfRound()==right,generated.equivalent(right));
+		console.log(generated.equivalent(right),new sfcalc(generated.toString()).equivalent(right)); // supposed to check numeric and string representation
 	}
 }
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
