@@ -128,36 +128,43 @@ class sfcalc {
 	}
 	// makes s have the same number of sf when read, assuming it doesn't have e notation
 	fix(s){
-		;
-		// remove leading zeros before one before dot 
+		s=s.substring(s.search('e')); // remove e notation for now
+		// remove leading zeros before one zero before dot 
 		s=s.substring(s.search(/[^0]|0?\./));
 		// remove digits past most significant figure
 		let fsi=sfcalc.firstSigIndex(s);
 		if (fsi!=-1) s=s.substring(0,fsi+this.sf);
 		let f=sfcalc.nsigfig(s,fsi);
+		let s=s.padEnd(s.length+this.sf-f,'0'); // this adds significant zeros or pads zeros to have correct order of magnitude
 		let frac=this.data%1;
 		// add dot if needed
 		if (this.sf>=f && !frac) s+='.'; // assuming that if frac the string would already have a dot
-		// add significant zeros
-		return s.padEnd(s.length+this.sf-sfcalc.nsigfig(s,fsi),'0');
+		return s;
 	}
 	// thanks to my CS teacher Shankar Kumar
-	toString(pute=true)
+	toString(put_e=true)
 	{
-		let n=this.sfRound(), s=new String(n);
-		if (!s.includes('e')) // it keeps the e if it's already there even if pute=false
+		let s=this.sfRound().toString();
+		s=this.fix(s);
+		let oom=this.orderOfMagnitude;
+		if (put_e)
 		{
-			s=this.sfRound().toString();
-			s=this.fix(s);
-			if (pute)
+			// thanks to regex101.com and MDN and regexone and whoever helped me learn regex and Hector Albizo
+			s=s.substring(sfcalc.firstSigIndex(s)).replace(/([1-9])/,"$1."); // start from the first significant figure and add a dot if it's not just 0
+			s+='e';
+			if (oom>=0) s+='+'; // mimic C++ and JS
+			s+=oom;
+		}
+		else
+		{
+			if (Math.abs(this.data)<1))
 			{
-				// thanks to regex101.com and MDN and regexone and whoever helped me learn regex and Hector Albizo
-				s=s.substring(sfcalc.firstSigIndex(s)).replace(/([1-9])/,"$1."); // start from the first significant figure and add a dot if it's not just 0
-
-				let oom=this.orderOfMagnitude;
-				s+='e';
-				if (oom>=0) s+='+'; // mimic C++ and JS
-				s+=oom;
+				let di=s.search(/\./), nzi=s.search(/1-9/);
+				if (nzi!=-1)
+				{
+					let soom=di-s.search(/[1-9]/);
+					
+				}
 			}
 		}
 		return s;
