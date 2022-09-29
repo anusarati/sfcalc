@@ -137,7 +137,7 @@ class sfcalc {
 		let s=Array.from(this.data.toString());
 		let fsi=firstSigIndex(s);
 		let mostSignificantIndex=fsi+this.sf;
-		let n;
+		let sAtLeast;
 		if (s.length-1 > mostSignificantIndex)
 		{
 			let mostSignificant=s[mostSignificantIndex];
@@ -151,20 +151,24 @@ class sfcalc {
 					if (s[i]=='.') --i; // skip dot
 					if (i==-1)
 					{
-						x=[1].concat(s);
+						s=[1].concat(s);
+						mostSignificantIndex++;
 						break;
 					}
 				}
 			}
-			s=s.join('');
-			let ei=s.search('e'); // keep scientific notation
-			n=s.substring(0,mostSignificantIndex);
-			if (ei!=-1) n+=s.substring(ei);
+		}
+		let n=s.join('');
+		let ei=s.search('e'); // keep scientific notation
+		if (s.length-1 > mostSignificantIndex) n=s.slice(0,mostSignificantIndex);
+		if (ei!=-1) n+=s.substring(ei);
 		}
 		else
 		{
+			let ei=s.search('e');
 			n=s.join(''); // the string could have less significant digits if they're trailing 0s
 			let f=sfcalc.nsigfig(n,fsi);
+			n.padEnd(n.length+this.sf-f,'0');
 		}
 		
 	}
