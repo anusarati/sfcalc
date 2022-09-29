@@ -7,6 +7,7 @@
 // https://en.wikipedia.org/wiki/Propagation_of_uncertainty
 // but significant figure rules are convention and are good enough for a few calculations, and error propagation is harder to do manually
 class sfcalc {
+	
 	// returns index of first significant figure in string
 	static firstSigIndex(s)
 	{
@@ -34,6 +35,9 @@ class sfcalc {
 		return Math.max(1,f); // at least 1 significant figure
 
 	}
+	// I found out that JS has built-in arbitrary integer arithmetic support
+	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt#browser_compatibility
+	// but to convert from Number it could still lose precision
 	constructor(data,sf)
 	{
 		// https://stackoverflow.com/q/30689817 reminded me I could check the type dynamically
@@ -114,6 +118,7 @@ class sfcalc {
 		return this.copy().divide(o);
 	}
 	// rounds according to sigfig rules
+	// suffers from floating point error for large absolute order of magnitude
 	sfRound()
 	{
 		let n=this.data;
