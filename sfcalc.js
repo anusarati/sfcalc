@@ -33,7 +33,6 @@ class sfcalc {
 		if (s.includes('-')) f--; // minus sign does not count as a significant figure
 		// thanks to Geoffrey Hinton and Flux.jl and machine learning community
 		return Math.max(1,f); // at least 1 significant figure
-
 	}
 	// I found out that JS has built-in arbitrary integer arithmetic support
 	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt#browser_compatibility
@@ -131,25 +130,56 @@ class sfcalc {
 		if (digitAfterMostSignificantDigit>5 || (digitAfterMostSignificantDigit==5 && mostSignificant%2)) n++;
 		return n/power;
 	}
+	// round string to avoid floating point error from multiplying/dividing by order of magnitude
+	// thanks to en.cppreference.com and the C standards committee for name
+	strRound()
+	{
+		let s=Array.from(this.data.toString());
+		let fsi=firstSigIndex(s);
+		let mostSignificantIndex=fsi+this.sf;
+		let n;
+		if (s.length-1 > mostSignificantIndex)
+		{
+			let mostSignificant=s[mostSignificantIndex];
+			let digitAfterMostSignificant=s[mostSignificantIndex+1];
+			if (digitAfterMostSignificant>5 || (digitAfterMostSignificantDigit==5 && mostSignificant%2))s
+			{
+				let i=mostSignificantIndex;
+				while (++s[i] == 10) // carry
+				{
+					--i;
+					if (s[i]=='.') --i; // skip dot
+					if (i==-1)
+					{
+						x=[1].concat(s);
+						break;
+					}
+				}
+			}
+			s=s.join('');
+			let ei=s.search('e'); // keep scientific notation
+			n=s.substring(0,mostSignificantIndex);
+			if (ei!=-1) n+=s.substring(ei);
+		}
+		else
+		{
+			n=s.join(''); // the string could have less significant digits if they're trailing 0s
+			let f=sfcalc.nsigfig(n,fsi);
+		}
+		
+	}
 	// makes s have the same number of sf when read, assuming it doesn't have e notation
-	fix(s){
-		s=s.substring(s.search('e')); // remove e notation for now
-		// remove leading zeros before one zero before dot 
-		s=s.substring(s.search(/[^0]|0?\./));
-		// remove digits past most significant figure
-		let fsi=sfcalc.firstSigIndex(s);
-		if (fsi!=-1) s=s.substring(0,fsi+this.sf);
+	sfString(){
+		let s=this.strRound();
 		let f=sfcalc.nsigfig(s,fsi);
+		
 		let s=s.padEnd(s.length+this.sf-f,'0'); // this adds significant zeros or pads zeros to have correct order of magnitude
-		let frac=this.data%1;
-		// add dot if needed
-		if (this.sf>=f && !frac) s+='.'; // assuming that if frac the string would already have a dot
 		return s;
 	}
 	// thanks to my CS teacher Shankar Kumar
 	toString(put_e=true)
 	{
-		let s=this.sfRound().toString();
+		let s=this.strRound();
 		s=this.fix(s);
 		let oom=this.orderOfMagnitude;
 		if (put_e)
